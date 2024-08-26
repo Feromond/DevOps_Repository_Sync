@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json;
@@ -5,7 +6,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tokio::time::sleep;
 
 // Struct to hold the configuration
@@ -91,18 +92,27 @@ fn pull_changes(repo_path: &str) -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = read_config()?;
+    let mut last_change_time = SystemTime::now();
 
     loop {
         let remote_commit = get_latest_commit(&config.remote_url, &config.pat).await?;
         let local_commit = get_local_commit(&config.repo_path)?;
 
         if remote_commit != local_commit {
-            println!("New changes detected. Pulling updates...");
+            println!("\nNew changes detected. Pulling updates...");
             pull_changes(&config.repo_path)?;
+            last_change_time = SystemTime::now();
         } else {
-            println!("No new changes.");
+            let elapsed = last_change_time.elapsed()?.as_secs();
+            let last_change_time: DateTime<Utc> = last_change_time.into();
+            let formatted_time = last_change_time.format("%Y-%m-%d %H:%M:%S");
+            print!(
+                "\rNo new changes since {}. Elapsed time: {} seconds.",
+                formatted_time, elapsed
+            );
+            io::stdout().flush()?;
         }
 
-        sleep(Duration::from_secs(300)).await; // Check every 5 minutes
+        sleep(Duration::from_secs(20)).await; // Check every 20 seconds
     }
 }
