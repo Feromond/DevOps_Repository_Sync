@@ -15,6 +15,7 @@ struct Config {
     repo_path: String,
     remote_url: String,
     pat: String,
+    check_interval_seconds: u64,
 }
 // Grabs API response and deserializes it into the struct
 #[derive(Deserialize)]
@@ -113,6 +114,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             io::stdout().flush()?;
         }
 
-        sleep(Duration::from_secs(20)).await; // Check every 20 seconds
+        sleep(Duration::from_secs(config.check_interval_seconds)).await; // Check every 20 seconds
     }
 }

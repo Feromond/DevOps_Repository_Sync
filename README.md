@@ -4,7 +4,7 @@ This simple script is focused on syncing a local repo to a remote main branch in
 
 The executable should sit in the same directory as the config.toml file to run things correctly.
 
-Future updates will include the ability to modify the refresh time in the config, and will also allow config selection of whether to create a visible terminal window or to allow a background task to run on the machine.
+Future updates will include ~~the ability to modify the refresh time in the config~~ (DONE), and will also allow config selection of whether to create a visible terminal window or to allow a background task to run on the machine.
 
 > Note this script works currently on MacOS but is only designed and tested for Windows.
 
@@ -13,7 +13,7 @@ Future updates will include the ability to modify the refresh time in the config
 - Reads the config file to identify the local and remote repo, as well as the personal access token.
 - Checks if the commit hash/id for the remote repo matches the local git repo
 - If not matching, it will go and pull the latest changes and update the local repo
-- If they do match, it will continue to log the time since the last mis-match (defaulting first to when the script first ran) and check for any changes every 20 seconds (current locked default refresh)
+- If they do match, it will continue to log the time since the last mis-match (defaulting first to when the script first ran) and check for any changes every 20 seconds (current default refresh)
 
 ## Running the Script on Windows Startup
 
