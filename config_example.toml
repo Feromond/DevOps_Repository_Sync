@@ -1,7 +1,7 @@
 repo_path = "C:\\Users\\<usrname>\\Documents\\<repo-folder>" # Example Local Git Repository Path
-organization = "<your-org>"
-project = "<your-project>"
-repository = "<your-repo>"
-target_branch = "main"
+organization = "<your-org>"                                  # Input your organization name here
+project = "<your-project>"                                   # Input your project name here
+repository = "<your-repo>"                                   # Input your repository name here
+target_branch = "main"                                       # Select the target-remote branch that you want to compare with
 pat = "<TOKEN GOES HERE>"                                    # Replace with your Personal Access Token from Azure DevOps
 check_interval_seconds = 20                                  # Configurable time to check the remote repo against the local repo.
