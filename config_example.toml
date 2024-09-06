@@ -1,4 +1,7 @@
-repo_path = "C:\\Users\\<usrname>\\Documents\\<repo-folder>"                                                                                                                                              # Example Local Git Repository Path
-remote_url = "https://dev.azure.com/your-org/your-project/_apis/git/repositories/your-repo/commits?branchName=main&searchCriteria.itemVersion.version=main&searchCriteria.itemVersion.versionType=branch" # Replace with your remote URL
-pat = "<TOKEN GOES HERE>"                                                                                                                                                                                 # Replace with your Personal Access Token from Azure DevOps
-check_interval_seconds = 20                                                                                                                                                                               # Configurable time to check the remote repo against the local repo.
+repo_path = "C:\\Users\\<usrname>\\Documents\\<repo-folder>" # Example Local Git Repository Path
+organization = "<your-org>"
+project = "<your-project>"
+repository = "<your-repo>"
+target_branch = "main"
+pat = "<TOKEN GOES HERE>"                                    # Replace with your Personal Access Token from Azure DevOps
+check_interval_seconds = 20                                  # Configurable time to check the remote repo against the local repo.

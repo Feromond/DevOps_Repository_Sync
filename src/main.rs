@@ -16,7 +16,10 @@ use tokio::time::sleep;
 #[derive(Deserialize)]
 struct AppConfig {
     repo_path: String,
-    remote_url: String,
+    organization: String,
+    project: String,
+    repository: String,
+    target_branch: String,
     pat: String,
     check_interval_seconds: u64,
 }
@@ -58,13 +61,13 @@ fn read_config() -> Result<AppConfig, Box<dyn std::error::Error>> {
 
 // Checks the latest commit hash / id on the remote azure
 async fn get_latest_commit(
-    remote_url: &str,
-    pat: &str,
+    config: &AppConfig,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
+    let api_url = format!("https://dev.azure.com/{}/{}/_apis/git/repositories/{}/commits?branchName={}&searchCriteria.itemVersion.version={}&searchCriteria.itemVersion.versionType=branch", config.organization, config.project, config.repository, config.target_branch, config.target_branch);
     let response = client
-        .get(remote_url)
-        .basic_auth("", Some(pat))
+        .get(api_url)
+        .basic_auth("", Some(&config.pat))
         .send()
         .await?;
 
@@ -93,11 +96,17 @@ fn get_local_commit(repo_path: &str) -> Result<String, Box<dyn std::error::Error
     Ok(commit_id)
 }
 
-fn pull_changes(repo_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
+    let url_with_credentials = format!(
+        "https://{}:{}@dev.azure.com/{}/{}/_git/{}",
+                config.organization, config.pat, config.organization, config.project, config.repository
+    );
+
     let status = Command::new("git")
         .arg("-C")
-        .arg(repo_path)
+        .arg(&config.repo_path)
         .arg("pull")
+        .arg(&url_with_credentials)
         .status()?;
 
     if status.success() {
@@ -124,12 +133,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut last_change_time = SystemTime::now();
 
     loop {
-        match get_latest_commit(&config.remote_url, &config.pat).await {
+        match get_latest_commit(&config).await {
             Ok(remote_commit) => match get_local_commit(&config.repo_path) {
                 Ok(local_commit) => {
                     if remote_commit != local_commit {
                         info!("New changes detected. Pulling updates...");
-                        if let Err(e) = pull_changes(&config.repo_path) {
+                        if let Err(e) = pull_changes(&config) {
                             error!("Failed to pull changes: {}", e);
                         } else {
                             last_change_time = SystemTime::now();
