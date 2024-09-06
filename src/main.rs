@@ -60,9 +60,7 @@ fn read_config() -> Result<AppConfig, Box<dyn std::error::Error>> {
 }
 
 // Checks the latest commit hash / id on the remote azure
-async fn get_latest_commit(
-    config: &AppConfig,
-) -> Result<String, Box<dyn std::error::Error>> {
+async fn get_latest_commit(config: &AppConfig) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
     let api_url = format!("https://dev.azure.com/{}/{}/_apis/git/repositories/{}/commits?branchName={}&searchCriteria.itemVersion.version={}&searchCriteria.itemVersion.versionType=branch", config.organization, config.project, config.repository, config.target_branch, config.target_branch);
     let response = client
@@ -99,7 +97,7 @@ fn get_local_commit(repo_path: &str) -> Result<String, Box<dyn std::error::Error
 fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
     let url_with_credentials = format!(
         "https://{}:{}@dev.azure.com/{}/{}/_git/{}",
-                config.organization, config.pat, config.organization, config.project, config.repository
+        config.organization, config.pat, config.organization, config.project, config.repository
     );
 
     let status = Command::new("git")
@@ -107,12 +105,25 @@ fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
         .arg(&config.repo_path)
         .arg("pull")
         .arg(&url_with_credentials)
-        .status()?;
+        .status()?; // Use status to avoid blocking
 
-    if status.success() {
-        info!("Changes pulled successfully.");
+    if !status.success() {
+        // If status failed, run output to capture stdout and stderr
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(&config.repo_path)
+            .arg("pull")
+            .arg(&url_with_credentials)
+            .output()?; // Use output only when the command fails
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        error!(
+            "Failed to pull changes. stdout: {}, stderr: {}",
+            stdout, stderr
+        );
     } else {
-        error!("Failed to pull changes.");
+        info!("Changes pulled successfully: {}", status.success());
     }
 
     Ok(())
