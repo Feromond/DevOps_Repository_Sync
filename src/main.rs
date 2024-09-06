@@ -73,7 +73,10 @@ async fn get_latest_commit(config: &AppConfig) -> Result<String, Box<dyn std::er
 
     let response_text = response.text().await?;
     let api_response: ApiResponse = serde_json::from_str(&response_text)?;
-    info!("Received latest commit from remote.");
+    info!(
+        "Received latest commit from remote: {}",
+        api_response.value[0].commit_id.clone().trim().to_string()
+    );
 
     // Grabbing first commit in the array to check most recent commit on Main
     Ok(api_response.value[0].commit_id.clone())
