@@ -108,6 +108,7 @@ fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
         .arg(&config.repo_path)
         .arg("pull")
         .arg(&url_with_credentials)
+        .arg(&config.target_branch)
         .status()?; // Use status to avoid blocking
 
     if !status.success() {
@@ -117,6 +118,7 @@ fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
             .arg(&config.repo_path)
             .arg("pull")
             .arg(&url_with_credentials)
+            .arg(&config.target_branch)
             .output()?; // Use output only when the command fails
 
         let stdout = String::from_utf8_lossy(&output.stdout);
