@@ -98,37 +98,147 @@ fn get_local_commit(repo_path: &str) -> Result<String, Box<dyn std::error::Error
 }
 
 fn pull_changes(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
+    let repo_path = &config.repo_path;
+
     let url_with_credentials = format!(
         "https://{}:{}@dev.azure.com/{}/{}/_git/{}",
         config.organization, config.pat, config.organization, config.project, config.repository
     );
 
-    let status = Command::new("git")
+    // Fetch all branches from the remote repository using the URL with credentials
+    let fetch_refspec = "+refs/heads/*:refs/remotes/origin/*";
+
+    let status_fetch = Command::new("git")
         .arg("-C")
-        .arg(&config.repo_path)
+        .arg(repo_path)
+        .arg("fetch")
+        .arg("--prune")
+        .arg(&url_with_credentials)
+        .arg(&fetch_refspec)
+        .status()?; // Use status to avoid blocking
+
+    if !status_fetch.success() {
+        // If fetch failed, capture stdout and stderr
+        let output_fetch = Command::new("git")
+            .arg("-C")
+            .arg(repo_path)
+            .arg("fetch")
+            .arg("--prune")
+            .arg(&url_with_credentials)
+            .arg(&fetch_refspec)
+            .output()?; // Use output only when the command fails
+
+        let stdout = String::from_utf8_lossy(&output_fetch.stdout);
+        let stderr = String::from_utf8_lossy(&output_fetch.stderr);
+        error!(
+            "Failed to fetch from remote. stdout: {}, stderr: {}",
+            stdout, stderr
+        );
+        return Err("Failed to fetch from remote".into());
+    } else {
+        info!("Fetched all branches from remote.");
+    }
+
+    // Check if the target branch exists locally
+    let status_branch_check = Command::new("git")
+        .arg("-C")
+        .arg(repo_path)
+        .arg("rev-parse")
+        .arg("--verify")
+        .arg(&config.target_branch)
+        .status()?; // Use status to avoid blocking
+
+    if !status_branch_check.success() {
+        // Branch doesn't exist locally, create it tracking the remote branch
+        let remote_branch = format!("origin/{}", &config.target_branch);
+        let status_checkout_new = Command::new("git")
+            .arg("-C")
+            .arg(repo_path)
+            .arg("checkout")
+            .arg("-b")
+            .arg(&config.target_branch)
+            .arg("--track")
+            .arg(&remote_branch)
+            .status()?; // Use status to avoid blocking
+
+        if !status_checkout_new.success() {
+            // If creating the branch failed, capture output
+            let output_checkout_new = Command::new("git")
+                .arg("-C")
+                .arg(repo_path)
+                .arg("checkout")
+                .arg("-b")
+                .arg(&config.target_branch)
+                .arg("--track")
+                .arg(&remote_branch)
+                .output()?; // Use output only when the command fails
+
+            let stdout_new = String::from_utf8_lossy(&output_checkout_new.stdout);
+            let stderr_new = String::from_utf8_lossy(&output_checkout_new.stderr);
+            error!(
+                "Failed to create and checkout branch '{}'. stdout: {}, stderr: {}",
+                config.target_branch, stdout_new, stderr_new
+            );
+            return Err("Failed to create and checkout branch".into());
+        } else {
+            info!("Created and checked out branch '{}'", config.target_branch);
+        }
+    } else {
+        // Branch exists locally, checkout the target branch
+        let status_checkout = Command::new("git")
+            .arg("-C")
+            .arg(repo_path)
+            .arg("checkout")
+            .arg(&config.target_branch)
+            .status()?; // Use status to avoid blocking
+
+        if !status_checkout.success() {
+            // If checkout failed, capture stdout and stderr
+            let output_checkout = Command::new("git")
+                .arg("-C")
+                .arg(repo_path)
+                .arg("checkout")
+                .arg(&config.target_branch)
+                .output()?; // Use output only when the command fails
+
+            let stdout = String::from_utf8_lossy(&output_checkout.stdout);
+            let stderr = String::from_utf8_lossy(&output_checkout.stderr);
+            error!(
+                "Failed to checkout branch '{}'. stdout: {}, stderr: {}",
+                config.target_branch, stdout, stderr
+            );
+            return Err("Failed to checkout branch".into());
+        } else {
+            info!("Checked out branch '{}'", config.target_branch);
+        }
+    }
+
+    let status_pull = Command::new("git")
+        .arg("-C")
+        .arg(repo_path)
         .arg("pull")
         .arg(&url_with_credentials)
         .arg(&config.target_branch)
         .status()?; // Use status to avoid blocking
 
-    if !status.success() {
-        // If status failed, run output to capture stdout and stderr
-        let output = Command::new("git")
+    if !status_pull.success() {
+        // If pull failed, capture stdout and stderr
+        let output_pull = Command::new("git")
             .arg("-C")
-            .arg(&config.repo_path)
+            .arg(repo_path)
             .arg("pull")
             .arg(&url_with_credentials)
             .arg(&config.target_branch)
             .output()?; // Use output only when the command fails
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output_pull.stdout);
+        let stderr = String::from_utf8_lossy(&output_pull.stderr);
         error!(
             "Failed to pull changes. stdout: {}, stderr: {}",
             stdout, stderr
         );
     } else {
-        info!("Changes pulled successfully: {}", status.success());
+        info!("Changes pulled successfully: {}", status_pull.success());
     }
 
     Ok(())
